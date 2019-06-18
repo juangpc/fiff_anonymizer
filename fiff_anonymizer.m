@@ -1,4 +1,4 @@
-function fiff_anonimyzer(fname)
+function fiff_anonymizer(fname)
 %
 %   fiff_anonymizer('fname.fif')
 %
