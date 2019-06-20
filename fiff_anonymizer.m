@@ -4,14 +4,13 @@ function fiff_anonymizer(fname)
 %
 %   Change every character in the subject name field by an 'X'.
 %
-%   Author : Juan García-Prieto, Centre for Biomedical Technology Madrid
+%   Author : Juan GarcÃ­a-Prieto, Centre for Biomedical Technology Madrid
 %   License : APACHE
 %
 %   This work was builded on top of the amazing scripts from 
 %   Matti Hamalainen, MGH Martinos Center, for fieltrip.
 %
 %   Revision 0.1  2012/08/02 
-%
 
 global FIFF;
 if isempty(FIFF)
