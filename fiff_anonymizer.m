@@ -1,68 +1,136 @@
-function fiff_anonymizer(fname)
+function fiff_anonymizer(inFile)
 %
 %   fiff_anonymizer('fname.fif')
 %
-%   Change every character in the subject name field by an 'X'.
+%   Author : Juan Garcia-Prieto, JuanGarciaPrieto@uth.tmc.edu
+%            UTHealth - Houston, Tx
+%   License : MIT
 %
-%   Author : Juan García-Prieto, Centre for Biomedical Technology Madrid
-%   License : APACHE
-%
-%   This work was builded on top of the amazing scripts from 
-%   Matti Hamalainen, MGH Martinos Center, for fieltrip.
-%
-%   Revision 0.1  2012/08/02 
+%   Revision 0.2  2019
 
 global FIFF;
 if isempty(FIFF)
-   FIFF = fiff_define_constants();
+  FIFF = fiff_define_constants();
+end
+[inFilePath,inFileName,inFileExt] = fileparts(inFile);
+outFile = fullfile(inFilePath,[inFileName '_anonymized2' inFileExt]);
+
+[infid,~] = fopen(inFile,'r+','ieee-be');
+[outfid,~] = fopen(outFile,'w+','ieee-be');
+
+inTagDir=[];
+outTagDir=[];
+
+followJumps=true;
+
+% posOffset=0;
+
+%read first tag->fileID
+inTag.kind = fread(infid,1,'int');
+inTag.type = fread(infid,1,'int');
+inTag.size = fread(infid,1,'int');
+inTag.next = fread(infid,1,'int');
+inTagDir=cat(1,inTagDir,inTag);
+if(inTag.size>0)
+  data=read_data(infid,inTag.type,inTag.size);
 end
 
-me='MNE:fiff_open';
+% nice to verify if fif version is all ok.
 
-[fid,msg] = fopen(fname,'r+','ieee-be');
-tag = fiff_read_tag_info(fid);
-tag = fiff_read_tag(fid);
-dirpos = double(tag.data);
-
-if dirpos > 0
-    tag = fiff_read_tag(fid,dirpos);
-    dir = tag.data;
-else
-    k = 0;
-    fseek(fid,0,'bof');
-    dir = struct('kind',{},'type',{},'size',{},'pos',{});
-    while tag.next >= 0
-        pos = ftell(fid);
-        tag = fiff_read_tag_info(fid);
-        k = k + 1;
-        dir(k).kind = tag.kind;
-        dir(k).type = tag.type;
-        dir(k).size = tag.size;
-        dir(k).pos  = pos;
+while(inTag.next ~= -1)
+  
+  inTag.kind = fread(infid,1,'int');
+  inTag.type = fread(infid,1,'int');
+  inTag.size = fread(infid,1,'int');
+  inTag.next = fread(infid,1,'int');
+  inTagDir=cat(1,inTagDir,inTag);
+  if(inTag.size>0)
+    data=read_data(infid,inTag.type,inTag.size);
+  end
+  if(followJumps && inTag.next>0)
+    disp('I am jumping!!!!!!!!!!!!!!!!');
+    fseek(infid,inTag.next,'bof');
+  end
+  
+    switch(inTag.kind)
+      %   case 114
+      %     %add modifier
+      %
+      case 204
+        %meas date
+        %data=zeros(size(data));
+        newData=[0;1];
+        newSize=inTag.size;
+  
+      case 212
+        %experimenter
+        newStr='anonymous';
+        disp(['Experimenter: ' char(data') ' -> ' newStr]);
+        newData=double(newStr)';
+        newSize=length(newData);
+        %   case 400
+      case 401
+        newStr='anonymous';
+        disp(['Subject First Name: ' char(data') ' -> ' newStr]);
+        newData=double(newStr)';
+        newSize=length(newData);
+        %   case 402
+        %   case 403
+      case 404
+        newData=2458029;
+        newSize=inTag.size;
+      case 405
+        disp("hahaha");
+        %   case 406
+        %   case 407
+        %   case 408
+        %   case 409
+        %   case 410
+        %   case 500
+        %   case 501
+        %   case 502
+        %   case 503
+        %   case 504
+      otherwise
+        newData=data;
+        newSize=inTag.size;
     end
+  
+  if(followJumps)
+    newNext=0;
+  end
+  
+  outTag.kind=inTag.kind;
+  outTag.type=inTag.type;
+  outTag.size=newSize;
+  outTag.next=newNext;
+  
+  %   posOffset=posOffset+inTag.size-newSize; %consider case next is pointing **before** in the file
+  %   if(inTag.next>0)
+  %    tag.next=tag.next-posOffset;
+  %   end
+  %
+  
+  fwrite(outfid,int32(outTag.kind),'int32');
+  fwrite(outfid,int32(outTag.type),'int32');
+  fwrite(outfid,int32(outTag.size),'int32');
+  fwrite(outfid,int32(outTag.next),'int32');
+  if(outTag.size>0)
+    write_data(outfid,newData,outTag.type);
+  end
+  
+  outTagDir=cat(1,outTagDir,outTag);
+  
 end
-tree = fiff_make_dir_tree(fid,dir);
 
-subject=fiff_dir_tree_find(tree,FIFF.FIFFB_SUBJECT);
+%we need to update the dir in the file!!!!
 
-for k = 1:subject.nent
-    pos  = subject.dir(k).pos;
-    
-    pos=pos+11; 
-    fseek(fid,pos,'bof');
-    
-    name_length=fread(fid,1);
-    
-    pos=pos+5; 
-    fseek(fid,pos,'bof');
-    
-    for i=1:name_length,
-        fwrite(fid,88,'uint8',0,'ieee-be');
-    end
+fclose(infid);
+fclose(outfid);
 
 end
 
-fclose(fid);
+
 
 
 
