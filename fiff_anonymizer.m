@@ -10,18 +10,23 @@ function fiff_anonymizer(inFile)
 
 MAX_VALID_VERSION = 1.3;
 TAG_INFO_SIZE = 16;
+DIRp_KIND = 101;
+DIR_KIND = 102;
+FREELIST_KIND = 106;
 
 [inFilePath,inFileName,inFileExt] = fileparts(inFile);
 outFile = fullfile(inFilePath,[inFileName '_anonymized' inFileExt]);
+
 offsetRegister=[];
+outTagList=[];
 
-[infid,~] = fopen(inFile,'r+','ieee-be');
-[outfid,~] = fopen(outFile,'w+','ieee-be');
+[inFid,~] = fopen(inFile,'r+','ieee-be');
+[outFid,~] = fopen(outFile,'w+','ieee-be');
 
-tagList=build_tag_info_pos_list(infid);
+inDir=build_tag_dir(inFid);
 
 %read first tag->fileID?->outFile
-inTag=read_tag(infid);
+inTag=read_tag(inFid);
 %checking for correct version of fif file format
 fileID=parse_fileID_tag(inTag.data);
 if(fileID.version>MAX_VALID_VERSION)
@@ -29,44 +34,56 @@ if(fileID.version>MAX_VALID_VERSION)
     ' fif files up to version: ' num2str(MAX_VALID_VERSION)]);
 end
 [outTag,~] = censor_tag(inTag);%offset will be always zero
-write_tag(outfid,outTag);
+write_tag(outFid,outTag);
 
-while ~feof(infid)
-  
-  tagPos=find(ftell(infid) == [tagList.pos]', 1);
-  goodTag=~isempty(tagPos);
-  
-  inTag=read_tag(infid);
-  if feof(infid)
+dirEntry=rmfield(outTag,'data');
+dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
+outTagList=cat(1,outTagList,dirEntry);
+
+while ~feof(inFid)
+  pos=ftell(inFid);
+  inTag=read_tag(inFid);
+  if feof(inFid)
     break;
   end
   
-  if(goodTag)
+  %check if orphan tag
+  tagPos=find(pos == [inDir.pos]', 1);
+  orphanTag=isempty(tagPos);
+  
+  if(~orphanTag)
     [outTag,offset] = censor_tag(inTag);
-    write_tag(outfid,outTag);
+    write_tag(outFid,outTag);
+    
+    dirEntry=rmfield(outTag,'data');
+    dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
+    outTagList=cat(1,outTagList,dirEntry);
+    
     if(offset~=0)
       offsetRegister=cat(1,offsetRegister,...
-        [ftell(outfid)-(TAG_INFO_SIZE+outTag.size),offset]);
+        [ftell(outFid)-(TAG_INFO_SIZE+outTag.size),offset]);
+      %sort Register!!!!
     end
+  elseif(inTag.kind == DIR_KIND)
+    dirTagPos=ftell(outFid);
+    write_tag(outFid,inTag);%both in and outTag will be equal size.
   else
-    if(inTag.kind == 102)
-      %tag directory->outFile
-      disp('writing tag directory');
-      dirpos=ftell(outfid);
-      write_directory(outfid,tagList);
-    else
-      disp(['Orfan tag at: ' num2str(ftell(infid)-(TAG_INFO_SIZE+inTag.size))]);
-    end
+    disp(['Warning! Orphan tag at: ' num2str(ftell(inFid)-(TAG_INFO_SIZE+inTag.size))]);
   end
 end
 
-fclose(infid);
 
-%we need to update the dir in the file!!!!
-fseek(outfid,0,'bof');
+fclose(inFid);
+
+update_next_field(outFid,offsetRegister);
+outDir=build_tag_dir(outFid);
+update_data(outFid,outDir,dirTagPos);
+update_pointer(outFid,outDir,DIRp_KIND,dirTagPos);
+update_pointer(outFid,outDir,FREELIST_KIND,-1);
+write_directory(outFid,outDir,dirTagPos);
 
 
-fclose(outfid);
+fclose(outFid);
 
 end
 
@@ -116,7 +133,9 @@ end
 
 function [outTag,sizeDiff] = censor_tag(inTag,varargin)
 
-defaultString = 'Fiff_anonymizer';
+%add block type to censorer to better identify tag.
+
+defaultString = 'fiff_anonymizer';
 defaultTime = datetime(2017,10,2);
 
 switch(inTag.kind)
@@ -139,8 +158,8 @@ switch(inTag.kind)
     newData=double(defaultString)';
     %   case 402
     %   case 403
-  case 404
-    newData=juliandate(defaultTime);
+  %case 404
+    %newData=juliandate(defaultTime);
     %   case 405
     %   case 406
     %   case 407
@@ -166,32 +185,141 @@ sizeDiff = (outTag.size - inTag.size);
 
 end
 
-function tagList = build_tag_info_pos_list(fid)
+function tagDir = build_tag_dir(fid)
+filePos=ftell(fid);
 fseek(fid,0,'bof');
-tagList=[];
-tag.next=0;
-while(tag.next~=-1)
+
+tagDir=[];
+next=0;
+while(next~=-1)
   pos=ftell(fid);
   tag=read_tag(fid,true);
   tag.pos=pos;
+  next=tag.next;
   tag=rmfield(tag,'data');
-  tagList=cat(1,tagList,tag);
+  tag=rmfield(tag,'next');
+  tagDir=cat(1,tagDir,tag);
 end
 
+fseek(fid,filePos,'bof');
+end
+
+function write_directory(fid,dir,dirpos)
+filePos=ftell(fid);
+
+fseek(fid,dirpos+TAG_INFO_SIZE,'bof');
+for i=1:size(dir,1)
+  fwrite(fid,int32(dir(i).kind),'int32');
+  fwrite(fid,int32(dir(i).type),'int32');
+  fwrite(fid,int32(dir(i).size),'int32');
+  fwrite(fid,int32(dir(i).pos),'int32');
+end
+
+fseek(fid,filePos,'bof');
+end
+
+function count=update_pointer(fid,dir,tagKind,newAddr)
+filePos=ftell(fid);
+
+tagPos=find(tagKind == [dir.kind]', 1);
+if ~isempty(tagPos)
+  fseek(fid,dir(tagPos).pos+TAG_INFO_SIZE,'bof');
+  count=fwrite(fid,int32(newAddr),'int32');
+else
+  count=0;
+end
+
+fseek(fid,filePos,'bof');
+end
+
+function newAddr=update_addr(addr,offsetRegister)
+
+offset=0;
+i=1;
+while addr>offsetRegister(i,1) && i<=size(offsetRegister,1)
+  offset=offset+offsetRegister(i,2);
+  i=i+1;
+end
+newAddr=addr+offset;
+end
+
+function update_next_field(fid,offsetRegister)
+filePos=ftell(fid);
 fseek(fid,0,'bof');
 
+pos=ftell(fid);
+tag=read_tag(fid);
+while(tag.next~=-1)
+  if tag.next>0
+    tag.next=update_addr(tag.next,offsetRegister);
+    fseek(fid,pos,'bof');
+    write_tag(fid,tag);
+    fseek(fid,tag.next,'bof');
+  end
+  pos=ftell(fid);
+  tag=read_tag(fid);
 end
 
-function write_directory(fid,tagList)
-
-for i=1:size(1,tagList)
-  fwrite(fid,int32(tagList(i).kind),'int32');
-  fwrite(fid,int32(tagList(i).type),'int32');
-  fwrite(fid,int32(tagList(i).size),'int32');
-  fwrite(fid,int32(tagList(i).pos),'int32');
+fseek(fid,filePos,'bof');
 end
 
-end
+% function update_dir_pointer(fid,offsetRegister)
+% filePos=ftell(fid);
+% fseek(fid,0,'bof');
+% 
+% tag.next=0;
+% while(tag.next~=-1)
+%   pos=ftell(fid);
+%   tag=read_tag(fid);
+%   if tag.next>0
+%     tag.next=update_addr(tag.next,offsetRegister);
+%     fseek(fid,pos,'bof');
+%     write_tag(fid,tag);
+%     fseek(fid,tag.next,'bof');
+%   end
+% end
+% 
+% fseek(fid,filePos,'bof');
+% end
+
+%
+% end
+% 
+% 
+%   if(dir(i).kind == 106)
+%     fseek(fid,dir(i).pos+16,'bof');
+%     addr=fread(fid,1,'int32');
+%     newAddr=update_addr(addr,offsetRegister);
+%     fseek(fid,dir(i).pos+16,'bof');
+%     fwrite(fid,int32(newAddr),'int32');
+%   end
+
+% 
+% 
+% function newDir = update_tag_dir(fid,offsetRegister)
+% % newDir=dir;
+% % for i=1:size(dir,1)
+% %   newDir(i).pos=update_addr(dir(i).pos,offsetRegister);
+% % end
+% filePos=ftell(fid);
+% 
+% fseek(fid,0,'bof');
+% tagDir=[];
+% next=0;
+% while(next~=-1)
+%   pos=ftell(fid);
+%   tag=read_tag(fid);
+%   tag.pos=pos;
+%   next=update_addr(tag.next,offsetRegister);
+%   
+%   tag=rmfield(tag,'data');
+%   tag=rmfield(tag,'next');
+%   tagDir=cat(1,tagDir,tag);
+% end
+% 
+% fseek(fid,filePos,'bof');
+% 
+% end
 
 
 
