@@ -77,11 +77,9 @@ fclose(inFid);
 
 update_next_field(outFid,offsetRegister);
 outDir=build_tag_dir(outFid);
-update_data(outFid,outDir,dirTagPos);
 update_pointer(outFid,outDir,DIRp_KIND,dirTagPos);
 update_pointer(outFid,outDir,FREELIST_KIND,-1);
 write_directory(outFid,outDir,dirTagPos);
-
 
 fclose(outFid);
 
@@ -198,7 +196,7 @@ while(next~=-1)
   next=tag.next;
   tag=rmfield(tag,'data');
   tag=rmfield(tag,'next');
-  tagDir=cat(1,tagDir,tag);
+  tagDir=cat(2,tagDir,tag);
 end
 
 fseek(fid,filePos,'bof');
@@ -262,64 +260,6 @@ end
 
 fseek(fid,filePos,'bof');
 end
-
-% function update_dir_pointer(fid,offsetRegister)
-% filePos=ftell(fid);
-% fseek(fid,0,'bof');
-% 
-% tag.next=0;
-% while(tag.next~=-1)
-%   pos=ftell(fid);
-%   tag=read_tag(fid);
-%   if tag.next>0
-%     tag.next=update_addr(tag.next,offsetRegister);
-%     fseek(fid,pos,'bof');
-%     write_tag(fid,tag);
-%     fseek(fid,tag.next,'bof');
-%   end
-% end
-% 
-% fseek(fid,filePos,'bof');
-% end
-
-%
-% end
-% 
-% 
-%   if(dir(i).kind == 106)
-%     fseek(fid,dir(i).pos+16,'bof');
-%     addr=fread(fid,1,'int32');
-%     newAddr=update_addr(addr,offsetRegister);
-%     fseek(fid,dir(i).pos+16,'bof');
-%     fwrite(fid,int32(newAddr),'int32');
-%   end
-
-% 
-% 
-% function newDir = update_tag_dir(fid,offsetRegister)
-% % newDir=dir;
-% % for i=1:size(dir,1)
-% %   newDir(i).pos=update_addr(dir(i).pos,offsetRegister);
-% % end
-% filePos=ftell(fid);
-% 
-% fseek(fid,0,'bof');
-% tagDir=[];
-% next=0;
-% while(next~=-1)
-%   pos=ftell(fid);
-%   tag=read_tag(fid);
-%   tag.pos=pos;
-%   next=update_addr(tag.next,offsetRegister);
-%   
-%   tag=rmfield(tag,'data');
-%   tag=rmfield(tag,'next');
-%   tagDir=cat(1,tagDir,tag);
-% end
-% 
-% fseek(fid,filePos,'bof');
-% 
-% end
 
 
 
