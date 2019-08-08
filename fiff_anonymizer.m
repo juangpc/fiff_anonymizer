@@ -18,7 +18,7 @@ FREELIST_KIND = 106;
 outFile = fullfile(inFilePath,[inFileName '_anonymized' inFileExt]);
 
 offsetRegister=[];
-outTagList=[];
+%outTagList=[];
 
 [inFid,~] = fopen(inFile,'r+','ieee-be');
 [outFid,~] = fopen(outFile,'w+','ieee-be');
@@ -36,9 +36,9 @@ end
 [outTag,~] = censor_tag(inTag);%offset will be always zero
 write_tag(outFid,outTag);
 
-dirEntry=rmfield(outTag,'data');
-dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
-outTagList=cat(1,outTagList,dirEntry);
+% dirEntry=rmfield(outTag,'data');
+% dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
+% outTagList=cat(1,outTagList,dirEntry);
 
 while ~feof(inFid)
   pos=ftell(inFid);
@@ -55,9 +55,9 @@ while ~feof(inFid)
     [outTag,offset] = censor_tag(inTag);
     write_tag(outFid,outTag);
     
-    dirEntry=rmfield(outTag,'data');
-    dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
-    outTagList=cat(1,outTagList,dirEntry);
+    % dirEntry=rmfield(outTag,'data');
+    % dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
+    % outTagList=cat(1,outTagList,dirEntry);
     
     if(offset~=0)
       offsetRegister=cat(1,offsetRegister,...
@@ -139,7 +139,8 @@ defaultTime = datetime(2017,10,2);
 switch(inTag.kind)
   case 100 %fileID
     newData=[inTag.data(1:12);0;0;0;1;0;0;0;1];
-    %   case 114
+    % case 113
+    % case 114
   case 204 %meas date
     t = dec2hex(posixtime(defaultTime));
     newData = hex2dec([t(1:2);t(3:4);t(5:6);t(7:8);'00';'00';'00';'01']);
@@ -149,7 +150,6 @@ switch(inTag.kind)
   case 212 %experimenter
     disp(['Experimenter: ' char(inTag.data') ' -> ' defaultString]);
     newData=double(defaultString)';
-    %   case 213 ?????????????
     %   case 400
   case 401
     disp(['Subject First Name: ' char(inTag.data') ' -> ' defaultString]);
