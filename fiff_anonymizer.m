@@ -9,77 +9,62 @@ function fiff_anonymizer(inFile)
 %   Revision 0.3  July 2019
 
 MAX_VALID_VERSION = 1.3;
-TAG_INFO_SIZE = 16;
-DIRp_KIND = 101;
-DIR_KIND = 102;
-FREELIST_KIND = 106;
 
 [inFilePath,inFileName,inFileExt] = fileparts(inFile);
-outFile = fullfile(inFilePath,[inFileName '_anonymized' inFileExt]);
-
-offsetRegister=[];
-%outTagList=[];
+outFile = fullfile(inFilePath,[inFileName '_anonymized4' inFileExt]);
 
 [inFid,~] = fopen(inFile,'r+','ieee-be');
 [outFid,~] = fopen(outFile,'w+','ieee-be');
 
-inDir=build_tag_dir(inFid);
+outDir=[];
+jump=true;
 
 %read first tag->fileID?->outFile
-inTag=read_tag(inFid);
+inTag=read_tag(inFid,jump);
+
+%checking for valid fiff file.
+if(inTag.kind ~= 100)
+  fclose(inFid);
+  fclose(outFid);
+  delete(outFile)
+  error('Sorry! This is not a valid FIFF file');
+end
+
 %checking for correct version of fif file format
 fileID=parse_fileID_tag(inTag.data);
 if(fileID.version>MAX_VALID_VERSION)
   error(['Sorry! This version of fiff_anonymizer only supports' ...
     ' fif files up to version: ' num2str(MAX_VALID_VERSION)]);
 end
+
 [outTag,~] = censor_tag(inTag);%offset will be always zero
+outTag.next=0;
+outDir=add_entry_to_tagDir(outDir,outTag,ftell(outFid));
 write_tag(outFid,outTag);
 
-% dirEntry=rmfield(outTag,'data');
-% dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
-% outTagList=cat(1,outTagList,dirEntry);
-
-while ~feof(inFid)
-  pos=ftell(inFid);
-  inTag=read_tag(inFid);
-  if feof(inFid)
-    break;
-  end
+while (inTag.next ~= -1)
+  inTag=read_tag(inFid,jump);
   
-  %check if orphan tag
-  tagPos=find(pos == [inDir.pos]', 1);
-  orphanTag=isempty(tagPos);
-  
-  if(~orphanTag)
-    [outTag,offset] = censor_tag(inTag);
-    write_tag(outFid,outTag);
-    
-    % dirEntry=rmfield(outTag,'data');
-    % dirEntry.pos=ftell(outFid)-(TAG_INFO_SIZE+dirEntry.size);
-    % outTagList=cat(1,outTagList,dirEntry);
-    
-    if(offset~=0)
-      offsetRegister=cat(1,offsetRegister,...
-        [ftell(outFid)-(TAG_INFO_SIZE+outTag.size),offset]);
-      %sort Register!!!!
-    end
-  elseif(inTag.kind == DIR_KIND)
-    dirTagPos=ftell(outFid);
-    write_tag(outFid,inTag);%trick. both in and outTag will be equal size.
-  else
-    disp(['Warning! Orphan tag at: ' num2str(ftell(inFid)-(TAG_INFO_SIZE+inTag.size))]);
+  [outTag,~] = censor_tag(inTag);
+  if (outTag.next > 0)
+    outTag.next=0;
   end
+  outDir=add_entry_to_tagDir(outDir,outTag,ftell(outFid));
+  write_tag(outFid,outTag);
+  
 end
 
+outDir=add_final_entry_to_tagDir(outDir);
 
 fclose(inFid);
 
-update_next_field(outFid,offsetRegister);
-outDir=build_tag_dir(outFid);
-update_pointer(outFid,outDir,DIRp_KIND,dirTagPos);
-update_pointer(outFid,outDir,FREELIST_KIND,-1);%not needed but want to keep here to remind me of this ptr.
-write_directory(outFid,outDir,dirTagPos);
+outDirAddr=ftell(outFid);
+write_directory(outFid,outDir,outDirAddr);
+
+ptrDIR_KIND = 101;
+ptrFREELIST_KIND = 106;
+update_pointer(outFid,outDir,ptrDIR_KIND,outDirAddr);
+update_pointer(outFid,outDir,ptrFREELIST_KIND,-1);
 
 fclose(outFid);
 
@@ -156,7 +141,7 @@ switch(inTag.kind)
     newData=double(defaultString)';
     %   case 402
     %   case 403
-  %case 404
+    %case 404
     %newData=juliandate(defaultTime);
     %   case 405
     %   case 406
@@ -183,40 +168,42 @@ sizeDiff = (outTag.size - inTag.size);
 
 end
 
-function tagDir = build_tag_dir(fid)
-filePos=ftell(fid);
-fseek(fid,0,'bof');
-
-tagDir=[];
-next=0;
-while(next~=-1)
-  pos=ftell(fid);
-  tag=read_tag(fid,true);
-  tag.pos=pos;
-  next=tag.next;
-  tag=rmfield(tag,'data');
-  tag=rmfield(tag,'next');
-  tagDir=cat(2,tagDir,tag);
+function tagDir = add_entry_to_tagDir(tagDir,tag,pos)
+tag=rmfield(tag,'data');
+tag=rmfield(tag,'next');
+tag.pos=pos;
+tagDir=cat(2,tagDir,tag);
 end
 
-fseek(fid,filePos,'bof');
+function tagDir = add_final_entry_to_tagDir(tagDir)
+tag.kind=-1;
+tag.type=-1;
+tag.size=-1;
+tag.pos=-1;
+tagDir=cat(2,tagDir,tag);
 end
 
 function write_directory(fid,dir,dirpos)
-filePos=ftell(fid);
+% TAG_INFO_SIZE = 16;
+numTags=size(dir,2);
 
-fseek(fid,dirpos+TAG_INFO_SIZE,'bof');
-for i=1:size(dir,1)
+fseek(fid,dirpos,'bof');
+fwrite(fid,int32(102),'int32');
+fwrite(fid,int32(32),'int32');
+fwrite(fid,int32(16*numTags),'int32');
+fwrite(fid,int32(-1),'int32');
+
+for i=1:numTags
   fwrite(fid,int32(dir(i).kind),'int32');
   fwrite(fid,int32(dir(i).type),'int32');
   fwrite(fid,int32(dir(i).size),'int32');
   fwrite(fid,int32(dir(i).pos),'int32');
 end
 
-fseek(fid,filePos,'bof');
 end
 
 function count=update_pointer(fid,dir,tagKind,newAddr)
+TAG_INFO_SIZE = 16;
 filePos=ftell(fid);
 
 tagPos=find(tagKind == [dir.kind]', 1);
@@ -229,37 +216,4 @@ end
 
 fseek(fid,filePos,'bof');
 end
-
-function newAddr=update_addr(addr,offsetRegister)
-
-offset=0;
-i=1;
-while addr>offsetRegister(i,1) && i<=size(offsetRegister,1)
-  offset=offset+offsetRegister(i,2);
-  i=i+1;
-end
-newAddr=addr+offset;
-end
-
-function update_next_field(fid,offsetRegister)
-filePos=ftell(fid);
-fseek(fid,0,'bof');
-
-pos=ftell(fid);
-tag=read_tag(fid);
-while(tag.next~=-1)
-  if tag.next>0
-    tag.next=update_addr(tag.next,offsetRegister);
-    fseek(fid,pos,'bof');
-    write_tag(fid,tag);
-    fseek(fid,tag.next,'bof');
-  end
-  pos=ftell(fid);
-  tag=read_tag(fid);
-end
-
-fseek(fid,filePos,'bof');
-end
-
-
 
