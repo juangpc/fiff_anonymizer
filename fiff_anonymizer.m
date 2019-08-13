@@ -66,7 +66,7 @@ while ~feof(inFid)
     end
   elseif(inTag.kind == DIR_KIND)
     dirTagPos=ftell(outFid);
-    write_tag(outFid,inTag);%both in and outTag will be equal size.
+    write_tag(outFid,inTag);%trick. both in and outTag will be equal size.
   else
     disp(['Warning! Orphan tag at: ' num2str(ftell(inFid)-(TAG_INFO_SIZE+inTag.size))]);
   end
@@ -78,7 +78,7 @@ fclose(inFid);
 update_next_field(outFid,offsetRegister);
 outDir=build_tag_dir(outFid);
 update_pointer(outFid,outDir,DIRp_KIND,dirTagPos);
-update_pointer(outFid,outDir,FREELIST_KIND,-1);
+update_pointer(outFid,outDir,FREELIST_KIND,-1);%not needed but want to keep here to remind me of this ptr.
 write_directory(outFid,outDir,dirTagPos);
 
 fclose(outFid);
