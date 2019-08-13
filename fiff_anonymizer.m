@@ -11,7 +11,7 @@ function fiff_anonymizer(inFile)
 MAX_VALID_VERSION = 1.3;
 
 [inFilePath,inFileName,inFileExt] = fileparts(inFile);
-outFile = fullfile(inFilePath,[inFileName '_anonymized4' inFileExt]);
+outFile = fullfile(inFilePath,[inFileName '_anonymized' inFileExt]);
 
 [inFid,~] = fopen(inFile,'r+','ieee-be');
 [outFid,~] = fopen(outFile,'w+','ieee-be');
@@ -53,11 +53,9 @@ while (inTag.next ~= -1)
   write_tag(outFid,outTag);
   
 end
-
-outDir=add_final_entry_to_tagDir(outDir);
-
 fclose(inFid);
 
+outDir=add_final_entry_to_tagDir(outDir);
 outDirAddr=ftell(outFid);
 write_directory(outFid,outDir,outDirAddr);
 
