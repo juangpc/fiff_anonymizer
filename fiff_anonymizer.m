@@ -105,14 +105,14 @@ function fiff_anonymizer(inFile,varargin)
 %                      'set_subject_birthday_offset',10, ...
 %                      'brute',true, ...
 %                      'verbose',true, ...
-%                      'delete_input_file_after',true, ...
-%                      'delete_confirmation',false)
+%                      'delete_input_file_after',false, ...
+%                      'delete_confirmation',true)
 %
 %   Author : Juan Garcia-Prieto, JuanGarciaPrieto@uth.tmc.edu
 %            UTHealth - Houston, Tx
 %   License : MIT
 %
-%   Revision 0.3  July 2019
+%   Revision 0.8  July 2019
 
 MAX_VALID_VERSION = 1.3;
 
