@@ -54,6 +54,11 @@ function fiff_anonymizer(inFile,varargin)
 %   brute           {true,false}            	Default: false
 %                   Additional Subject and Project information fields will
 %                   be anonymized.
+%   quiet           {true,false}              Default: false
+%                   Quiet display option mode. Fiff_anonymizer runs but no
+%                   output is shown to the user, except for the prompt
+%                   shown whenever delete_input_file_after option is set 
+%                   accordingly. This option overrides the verbose mode.
 %
 %
 %   FIELDS ANONYMIZED BY DEFAULT:
@@ -200,7 +205,9 @@ update_pointer(outFid,outDir,ptrFREELIST_KIND,-1);
 
 fclose(outFid);
 
-disp(['Fiff_anonymizer finished correctly: ' opts.inputFile ' -> ' opts.outputFile]);
+if ~opts.quiet
+  disp(['Fiff_anonymizer finished correctly: ' opts.inputFile ' -> ' opts.outputFile]);
+end
 
 %file deletion
 if opts.deleteFileAfter
@@ -535,6 +542,7 @@ addParameter(p,'set_subject_birthday_offset',0,@isPositiveIntegerValuedNumeric);
 addParameter(p,'delete_input_file_after',false,@islogical);
 addParameter(p,'delete_confirmation',true,@islogical);
 addParameter(p,'brute',false,@islogical);
+addParameter(p,'quiet',false,@islogical);
 
 parse(p,fileName,varargin{:});
 
@@ -553,6 +561,11 @@ opts.subjectBirthDayOffset=p.Results.set_subject_birthday_offset;
 opts.deleteFileAfter=p.Results.delete_input_file_after;
 opts.deleteConfirmation=p.Results.delete_confirmation;
 opts.brute=p.Results.brute;
+opts.quiet=p.Results.quiet;
+if opts.quiet
+  opts.verbose=false;
+end
+
 opts.usingMeasDateOffset = ...
   ~any(strcmp(p.UsingDefaults,'set_measurement_date_offset'));
 opts.usingSubjectBirthDayOffset = ...
