@@ -130,8 +130,8 @@ if opts.verbose
   disp('FIFF ANONYMIZER');
   disp('Fiff_anonymizer removes personal identifiable information and personal');
   disp('health information from an input fiff file.');
-  disp(' ');
   disp(['Date: ' datestr(datetime('now'))]);
+  disp(' ');
 end
 
 [inFid,~] = fopen(opts.inputFile,'r+','ieee-be');
@@ -225,7 +225,8 @@ end
 
 if opts.verbose
   disp(' ');
-  disp('   ================================================================');
+  disp('================================================================');
+  disp(' ');
 end
 
 end
