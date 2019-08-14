@@ -114,7 +114,7 @@ function fiff_anonymizer(inFile,varargin)
 %
 %   Revision 0.8  August 2019
 
-MAX_VALID_VERSION = 1.3;
+MAX_VALID_FIFF_VERSION = 1.3;
 
 if(nargin==0)
   error('Please specify a fiff file to anonymize.');
@@ -156,9 +156,9 @@ end
 
 %checking for correct version of fif file format
 fileID=parse_fileID_tag(inTag.data);
-if(fileID.version>MAX_VALID_VERSION)
+if(fileID.version>MAX_VALID_FIFF_VERSION)
   error(['Sorry! This version of fiff_anonymizer only supports' ...
-    ' fif files up to version: ' num2str(MAX_VALID_VERSION)]);
+    ' fif files up to version: ' num2str(MAX_VALID_FIFF_VERSION)]);
 end
 
 [outTag,~] = censor_tag(inTag,blockTypeList,opts);
