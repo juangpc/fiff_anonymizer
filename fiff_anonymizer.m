@@ -112,7 +112,7 @@ function fiff_anonymizer(inFile,varargin)
 %            UTHealth - Houston, Tx
 %   License : MIT
 %
-%   Revision 0.8  July 2019
+%   Revision 0.8  August 2019
 
 MAX_VALID_VERSION = 1.3;
 
