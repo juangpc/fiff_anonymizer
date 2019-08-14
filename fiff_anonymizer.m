@@ -208,11 +208,10 @@ disp(['Fiff_anonymizer: ' opts.inputFile ' -> ' opts.outputFile]);
 if opts.deleteFileAfter
   deleteThisFile=false;
   if opts.deleteConfirmation
-    disp('This is a confirmation message.');
-    disp(['You have requested to delete the input file:' opts.inputFile]);
-    prompt='Are you sure you want to delete the file? (y/n)';
-    confirm=input(prompt,'s');
-    if(strcmp(confirm,'y') || strcmp(confirm,'yes') || strcmp(confirm,'Y') || strcmp(confirm,'YES'))
+    disp(['     You have requested to delete the input file: ' opts.inputFile]);
+    prompt='     Are you sure you want to delete this file? (y/n)  ';
+    userInput=input(prompt,'s');
+    if(strcmp(userInput,'y') || strcmp(userInput,'yes') || strcmp(userInput,'Y') || strcmp(userInput,'YES'))
       deleteThisFile=true;
     end
   else
@@ -283,7 +282,7 @@ switch(inTag.kind)
     versionNum = inTag.data(1:4);
     newMacAddr = [0;0;0;0;0;0;0;0];
     if opts.usingMeasDateOffset
-      newDatePosix=inFileId.time-24*60*60*opts.measDateOffset;
+      newDatePosix=ceil(inFileId.time-24*60*60*opts.measDateOffset);
     else
       newDatePosix=opts.measDateDefault;
     end
@@ -300,8 +299,9 @@ switch(inTag.kind)
         ' -> ' datestr(datetime(newDatePosix,'ConvertFrom','posixtime'))]);
     end
   case 204 %meas date
+    inDate=inTag.data(1)*16^6  + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
     if opts.usingMeasDateOffset
-      newDatePosix=inTag.data-24*60*60*opts.measDateOffset;
+      newDatePosix=ceil(inDate-24*60*60*opts.measDateOffset);
     else
       newDatePosix=opts.measDateDefault;
     end
@@ -351,14 +351,14 @@ switch(inTag.kind)
     end
   case 404
     if opts.usingSubjectBirthDayOffset
-      inBirthDay=inTag.data(1)*16^3  + inTag.data(2)*16^2 + inTag.data(3)*16 + inTag.data(4);
+      inBirthDay=inTag.data(1)*16^6  + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
       inBirthDayPosix=posixtime(datetime(inBirthDay,'ConvertFrom','juliandate'));
       newDatePosix=inBirthDayPosix-24*60*60*opts.subjectBirthDayOffset;
     else
       newDatePosix=opts.subjectBirthDayDefault;
     end
-    newDateJulian=juliandate(datetime(newDatePosix,'convertfrom','posixtime'));
-    newDate=dec2hex(newDateJulian);
+    newDateJulian=ceil(juliandate(datetime(newDatePosix,'convertfrom','posixtime')));
+    newDate=['00' dec2hex(newDateJulian)];
     newData= ...
       hex2dec([newDate(1:2);newDate(3:4);newDate(5:6);newDate(7:8)]);
     if opts.verbose
