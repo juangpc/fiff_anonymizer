@@ -113,12 +113,13 @@ function fiff_anonymizer(inFile,varargin)
 %                      'delete_input_file_after',false, ...
 %                      'delete_confirmation',true)
 %
-%   Author : Juan Garcia-Prieto, JuanGarciaPrieto@uth.tmc.edu
+%   Author:  Juan Garcia-Prieto, JuanGarciaPrieto@uth.tmc.edu
 %            UTHealth - Houston, Tx
-%   License : MIT
+%   License: MIT
 %
-%   Revision 0.8  August 2019
-
+%   Version: 0.8  August 2019
+%
+VERSION = 0.8;
 MAX_VALID_FIFF_VERSION = 1.3;
 
 if(nargin==0)
@@ -135,7 +136,7 @@ if opts.verbose
   disp('FIFF ANONYMIZER');
   disp('Fiff_anonymizer removes personal identifiable information and personal');
   disp('health information from an input fiff file.');
-  disp(['Date: ' datestr(datetime('now'))]);
+  disp(['Version ' num2str(VERSION) '  -  Date: ' datestr(datetime('now'))]);
   disp(' ');
 end
 
