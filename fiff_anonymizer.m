@@ -12,6 +12,9 @@ function fiff_anonymizer(inFile,varargin)
 %   file, however with anonymized information. The input file is left
 %   unaltered.
 %
+%   Dependencies:   No dependencies. This application is self-contained and
+%                   does not depend on any external library or toolset.
+%
 %   Options:
 %
 %   filename        example.fif
@@ -93,9 +96,11 @@ function fiff_anonymizer(inFile,varargin)
 %   
 %   Example
 %      fiff_anonymizer('filename.fif');
+%           [Output: filename_anonymized.fif]
 %   
 %   Example
 %      fiff_anonymizer('filename.fif', ...
+%                      'output_file','out_filename.fif', ...
 %                      'set_measurement_date_offset',30, ...
 %                      'set_subject_birthday_offset',10, ...
 %                      'brute',true, ...
@@ -427,9 +432,9 @@ switch(inTag.kind)
   case 2006
     disp(' ');
     disp('WARNING. The input fif file contains MRI data.');
-    disp('Beware that subjects face can be reconstructed from it');
-    disp('This software can not anonymize MRI data, at the moment');
-    disp('Contanct the authors for more information');
+    disp('Beware that a subject''s face can be reconstructed from it');
+    disp('This software can not anonymize MRI data, at the moment.');
+    disp('Contanct the authors for more information.');
     disp(' ');
     
   otherwise
