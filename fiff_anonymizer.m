@@ -114,7 +114,6 @@ function fiff_anonymizer(inFile,varargin)
 %
 %   Revision 0.3  July 2019
 
-
 MAX_VALID_VERSION = 1.3;
 
 if(nargin==0)
@@ -126,14 +125,12 @@ blockTypeList=[];
 readJump=true;
 
 if opts.verbose
-  disp('   ================================================================');
+  disp('================================================================');
   disp(' ');
-  disp('FIFF ANONYMIZER.');
+  disp('FIFF ANONYMIZER');
   disp(' ');
   disp('This application substitutes relevant patient/subject information from fiff files.');
-  disp('Contact the authors for more information.');
   disp(' ');
-
 end
 
 [inFid,~] = fopen(opts.inputFile,'r+','ieee-be');
@@ -183,7 +180,7 @@ end
 fclose(inFid);
 
 if opts.verbose
-  disp('Building Tag Directory of the anonymized file');
+  disp('Building Tag Directory from the anonymized file.');
 end
 outDir=add_final_entry_to_tagDir(outDir);
 outDirAddr=ftell(outFid);
@@ -202,7 +199,7 @@ update_pointer(outFid,outDir,ptrFREELIST_KIND,-1);
 
 fclose(outFid);
 
-disp(['Fiff_anonymizer: ' opts.inputFile ' -> ' opts.outputFile]);
+disp(['Fiff_anonymizer finished correctly: ' opts.inputFile ' -> ' opts.outputFile]);
 
 %file deletion
 if opts.deleteFileAfter
@@ -311,7 +308,7 @@ switch(inTag.kind)
       '00';'00';'00';'01']);
     if opts.verbose
       disp(['Measurement date changed: ' ...
-        datestr(datetime(inTag.data,'ConvertFrom','posixtime')) ...
+        datestr(datetime(inDate,'ConvertFrom','posixtime')) ...
         ' -> ' datestr(datetime(newDatePosix,'ConvertFrom','posixtime'))]);
     end
   case 206
@@ -369,19 +366,19 @@ switch(inTag.kind)
   case 407
     if opts.brute
       inData=inTag.data;
-      data=inData(1)*16^6  + inData(2)*16^4 + inData(3)*16^2 + inData(4);
-      newData=opts.subjectWeight;
+      data = typecast(fliplr(uint8(inData)'),'single') ;
+      newData=fliplr(typecast(single(opts.subjectWeight),'uint8'));
       if opts.verbose
-        disp(['Subject weight changed:' num2str(data) ' -> ' num2str(opts.subjectWeight)]);
+        disp(['Subject weight changed: ' num2str(data) ' -> ' num2str(opts.subjectWeight)]);
       end
     end
   case 408
     if opts.brute
       inData=inTag.data;
-      data=inData(1)*16^6  + inData(2)*16^4 + inData(3)*16^2 + inData(4);
-      newData=opts.subjectHeight;
+      data = typecast( fliplr(uint8(inData)') , 'single') ;
+      newData=fliplr(typecast(single(opts.subjectHeight),'uint8'));
       if opts.verbose
-        disp(['Subject height changed:' num2str(data) ' -> ' num2str(opts.subjectHeight)]);
+        disp(['Subject height changed: ' num2str(data) ' -> ' num2str(opts.subjectHeight)]);
       end
     end
   case 409
@@ -400,33 +397,33 @@ switch(inTag.kind)
       inData=inTag.data;
       data=inData(1)*16^6  + inData(2)*16^4 + inData(3)*16^2 + inData(4);
       if opts.verbose
-        disp(['Project ID changed:' num2str(data) ' -> ' num2str(opts.projectId)]);
+        disp(['Project ID changed: ' num2str(data) ' -> ' num2str(opts.projectId)]);
       end
     end
   case 501
     if opts.brute
       newData=double(opts.projectName)';
       if opts.verbose
-        disp(['Project Name changed:' car(inTag.data') ' -> ' opts.projectName]);
+        disp(['Project Name changed: ' char(inTag.data') ' -> ' opts.projectName]);
       end
     end
   case 502
     if opts.brute
       newData=double(opts.projectAim)';
       if opts.verbose
-        disp(['Project Aim changed:' car(inTag.data') ' -> ' opts.projectAim]);
+        disp(['Project Aim changed: ' char(inTag.data') ' -> ' opts.projectAim]);
       end
     end
   case 503
     newData=double(opts.projectPersons)';
     if opts.verbose
-      disp(['Project Persons changed:' car(inTag.data') ' -> ' opts.projectPersons]);
+      disp(['Project Persons changed: ' char(inTag.data') ' -> ' opts.projectPersons]);
     end
   case 504
     if opts.brute
       newData=double(opts.projectComment)';
       if opts.verbose
-        disp(['Project Comment changed:' car(inTag.data') ' -> ' opts.projectComment]);
+        disp(['Project Comment changed: ' char(inTag.data') ' -> ' opts.projectComment]);
       end
     end
   case 2006
@@ -436,7 +433,6 @@ switch(inTag.kind)
     disp('This software can not anonymize MRI data, at the moment.');
     disp('Contanct the authors for more information.');
     disp(' ');
-    
   otherwise
     newData=inTag.data;
 end
