@@ -131,7 +131,7 @@ blockTypeList=[];
 readJump=true;
 
 if opts.verbose
-  disp('================================================================');
+  disp('======================================================================');
   disp(' ');
   disp('FIFF ANONYMIZER');
   disp('Fiff_anonymizer removes personal identifiable information and personal');
@@ -214,8 +214,10 @@ end
 if opts.deleteFileAfter
   deleteThisFile=false;
   if opts.deleteConfirmation
-    disp(['     You have requested to delete the input file: ' opts.inputFile]);
-    prompt='     Are you sure you want to delete this file? (y/n)  ';
+    disp(' ');
+    disp(['You have requested to delete the input file: ' opts.inputFile]);
+    disp('You can avoid this confirmation by using the ''delete_confirmation'' option.');
+    prompt='Are you sure you want to delete this file? (y/n)  ';
     userInput=input(prompt,'s');
     if(strcmp(userInput,'y') || strcmp(userInput,'yes') || strcmp(userInput,'Y') || strcmp(userInput,'YES'))
       deleteThisFile=true;
@@ -233,7 +235,7 @@ end
 
 if opts.verbose
   disp(' ');
-  disp('================================================================');
+  disp('======================================================================');
   disp(' ');
 end
 
@@ -299,7 +301,6 @@ switch(inTag.kind)
       '00';'00';'00';'01']);
     newData = [versionNum;newMacAddr;newDateData];
     if opts.verbose
-      disp('File version preserved.');
       disp('MAC address erased.');
       disp(['Measurement date changed: ' ...
         datestr(datetime(inFileId.time,'ConvertFrom','posixtime')) ...
@@ -592,4 +593,5 @@ opts.projectPersons='xxxx';
 opts.projectComment=defaultString;
 
 end
+
 
