@@ -278,9 +278,26 @@ end
 
 function fileInfo = parse_fileID_tag(data)
 fileInfo.version = (data(1)*16^2 + data(2)) + (data(3)*16^2 + data(4))/10;
-fileInfo.machineID = data(5:12);
+fileInfo.mac = data(5:12);
 fileInfo.time = data(13)*16^6  + data(14)*16^4 + data(15)*16^2 + data(16) ...
   + (data(17)*16^6 + data(18)*16^4 + data(19)*16^2 + data(20))/1e6;
+
+%parsing mac address to text
+%somewhat erratic. different elekta sites tend to code mac info in
+%different places. sometimes since the initial byte sometimes at the end.
+%don't know on what depends.
+macStr=[];
+if(data(12)==0)
+  for i=5:10
+    macStr=cat(2,macStr,[dec2hex(data(i),2) ':']);
+  end
+else
+  for i=7:12
+    macStr=cat(2,macStr,[dec2hex(data(i),2) ':']);
+  end
+end
+fileInfo.macStr=macStr(1:end-1);  
+
 end
 
 function [outTag,sizeDiff] = censor_tag(inTag,blockTypeList,opts)
@@ -289,7 +306,7 @@ switch(inTag.kind)
   case {100,103,109,110,116,120} %fileID
     inFileId=parse_fileID_tag(inTag.data);
     versionNum = inTag.data(1:4);
-    newMacAddr = [0;0;0;0;0;0;0;0];
+    newMacAddr = opts.defaultMAC;
     if opts.usingMeasDateOffset
       newDatePosix=ceil(inFileId.time-24*60*60*opts.measDateOffset);
     else
@@ -301,7 +318,8 @@ switch(inTag.kind)
       '00';'00';'00';'01']);
     newData = [versionNum;newMacAddr;newDateData];
     if opts.verbose
-      disp('MAC address erased.');
+      disp(['MAC address changed: ' inFileId.macStr ...
+        ' -> ' opts.defaultMacStr]);
       disp(['Measurement date changed: ' ...
         datestr(datetime(inFileId.time,'ConvertFrom','posixtime')) ...
         ' -> ' datestr(datetime(newDatePosix,'ConvertFrom','posixtime'))]);
@@ -575,6 +593,12 @@ opts.usingSubjectBirthDayOffset = ...
 
 opts.measDateDefault=posixtime(datetime(2000,1,1,0,1,1));
 opts.string=defaultString;
+opts.defaultMAC=[0;0;0;0;0;0;0;0];
+macStr=[];
+for i=1:6
+  macStr=cat(2,macStr,[dec2hex(opts.defaultMAC(i),2) ':']);
+end
+opts.defaultMacStr=macStr(1:end-1);  
 
 opts.subjectId=0;
 opts.subjectFirstName='xxxxx';
