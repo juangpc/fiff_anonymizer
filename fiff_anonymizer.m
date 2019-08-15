@@ -357,9 +357,9 @@ switch(inTag.kind)
       disp(['Subject Last Name changed: ' char(inTag.data') ' -> ' opts.subjectLastName]);
     end
   case 404
+    inBirthDay=inTag.data(1)*16^6  + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
+    inBirthDayPosix=posixtime(datetime(inBirthDay,'ConvertFrom','juliandate'));
     if opts.usingSubjectBirthDayOffset
-      inBirthDay=inTag.data(1)*16^6  + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
-      inBirthDayPosix=posixtime(datetime(inBirthDay,'ConvertFrom','juliandate'));
       newDatePosix=inBirthDayPosix-24*60*60*opts.subjectBirthDayOffset;
     else
       newDatePosix=opts.subjectBirthDayDefault;
