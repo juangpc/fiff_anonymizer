@@ -217,9 +217,9 @@ if opts.deleteFileAfter
     disp(' ');
     disp(['You have requested to delete the input file: ' opts.inputFile]);
     disp('You can avoid this confirmation by using the ''delete_confirmation'' option.');
-    prompt='Are you sure you want to delete this file? (y/n)  ';
+    prompt='Are you sure you want to delete this file? [Y/n]  ';
     userInput=input(prompt,'s');
-    if(strcmp(userInput,'y') || strcmp(userInput,'yes') || strcmp(userInput,'Y') || strcmp(userInput,'YES'))
+    if(strcmp(userInput,'Y') || strcmp(userInput,'YES'))
       deleteThisFile=true;
     end
   else
