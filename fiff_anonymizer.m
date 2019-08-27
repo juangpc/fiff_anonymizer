@@ -128,7 +128,7 @@ end
 opts = configure_options(inFile,varargin{:});
 outDir=[];
 blockTypeList=[];
-readJump=true;
+jumpAfterRead=true;
 
 if opts.verbose
   disp('======================================================================');
@@ -150,14 +150,14 @@ if(opts.verbose && outFid>0)
 end
 
 %read first tag->fileID?->outFile
-inTag=read_tag(inFid,readJump);
+inTag=read_tag(inFid,jumpAfterRead);
 blockTypeList=update_block_type_list(blockTypeList,inTag);
 
 %checking for valid fiff file.
 if(inTag.kind ~= 100)
   fclose(inFid);
   fclose(outFid);
-  delete(opts.outputFile)
+  delete(opts.outputFile);
   error('Sorry! This is not a valid FIFF file');
 end
 
@@ -174,7 +174,7 @@ outTag.next=0;
 write_tag(outFid,outTag);
 
 while (inTag.next ~= -1)
-  inTag=read_tag(inFid,readJump);
+  inTag=read_tag(inFid,jumpAfterRead);
   blockTypeList=update_block_type_list(blockTypeList,inTag);
   [outTag,~] = censor_tag(inTag,blockTypeList,opts);
   if (outTag.next > 0)
@@ -187,7 +187,7 @@ end
 fclose(inFid);
 
 if opts.verbose
-  disp('Building Tag Directory from the anonymized file.');
+  disp('Building Tag Directory for the anonymized file.');
 end
 outDir=add_final_entry_to_tagDir(outDir);
 outDirAddr=ftell(outFid);
