@@ -269,7 +269,7 @@ fwrite(fid, int32(tag.type), 'int32');
 fwrite(fid, int32(tag.size), 'int32');
 fwrite(fid, int32(tag.next), 'int32');
 if(tag.size>0)
-  fwrite(fid, int8(tag.data), 'uint8');
+  fwrite(fid, tag.data, 'uint8');
 end
 
 end
