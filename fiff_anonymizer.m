@@ -121,7 +121,7 @@ DATE = 'April 2020';
 MAX_VALID_FIFF_VERSION = 1.3;
 
 opts = configure_options(inFile, varargin{:});
-outDir = [];
+outTagDir = [];
 blockTypeList = [];
 jumpAfterRead = true;
 
@@ -157,7 +157,7 @@ end
 
 % anonymize and write first tag to output tag
 [outTag, ~] = censor_tag(inTag, blockTypeList, opts);
-outDir = add_entry_to_tagDir(outDir, outTag, ftell(outFid));
+outTagDir = add_entry_to_tagDir(outTagDir, outTag, ftell(outFid));
 outTag.next = 0;
 write_tag(outFid, outTag);
 
@@ -172,7 +172,7 @@ while (inTag.next ~= -1)
   if (outTag.next > 0)
     outTag.next = 0;
   end
-  outDir = add_entry_to_tagDir(outDir, outTag, ftell(outFid));
+  outTagDir = add_entry_to_tagDir(outTagDir, outTag, ftell(outFid));
   write_tag(outFid, outTag);
 end
 fclose(inFid);
@@ -180,20 +180,20 @@ fclose(inFid);
 if opts.verbose
   disp('Building Tag Directory for the anonymized file.');
 end
-outDir=add_final_entry_to_tagDir(outDir);
-outDirAddr=ftell(outFid);
+outTagDir = add_final_entry_to_tagDir(outTagDir);
+outTagDirAddr = ftell(outFid);
 if opts.verbose
   disp(['Saving Tag Directory into ' opts.outputFile]);
 end
-write_directory(outFid, outDir, outDirAddr);
+write_directory(outFid, outTagDir, outTagDirAddr);
 
 ptrDIR_KIND = 101;
 ptrFREELIST_KIND = 106;
 if opts.verbose
   disp(['Updating file pointers in' opts.outputFile]);
 end
-update_pointer(outFid, outDir, ptrDIR_KIND, outDirAddr);
-update_pointer(outFid, outDir, ptrFREELIST_KIND, -1);
+update_pointer(outFid, outTagDir, ptrDIR_KIND, outTagDirAddr);
+update_pointer(outFid, outTagDir, ptrFREELIST_KIND, -1);
 
 fclose(outFid);
 
