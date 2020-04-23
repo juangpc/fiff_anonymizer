@@ -147,7 +147,7 @@ if(opts.verbose && outFid>0)
   display(['Output file created: ' opts.outputFile]);
 end
 
-[inTag, endOfFile]=read_tag(inFid, jumpAfterRead);
+[inTag, endOfFile] = read_tag(inFid, jumpAfterRead);
 blockTypeList=update_block_type_list(blockTypeList, inTag);
 
 % read first tag->fileID?->outFile
@@ -160,8 +160,8 @@ end
 
 % anonymize and write first tag to output tag
 [outTag, ~] = censor_tag(inTag, blockTypeList, opts);
-outDir=add_entry_to_tagDir(outDir, outTag, ftell(outFid));
-outTag.next=0;
+outDir = add_entry_to_tagDir(outDir, outTag, ftell(outFid));
+outTag.next = 0;
 write_tag(outFid, outTag);
 
 % for all the tags in the file
@@ -173,7 +173,7 @@ while (inTag.next ~= -1)
   blockTypeList = update_block_type_list(blockTypeList, inTag);
   [outTag, ~] = censor_tag(inTag, blockTypeList, opts);
   if (outTag.next > 0)
-    outTag.next=0;
+    outTag.next = 0;
   end
   outDir = add_entry_to_tagDir(outDir, outTag, ftell(outFid));
   write_tag(outFid, outTag);
