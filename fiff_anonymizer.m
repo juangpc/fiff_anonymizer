@@ -120,9 +120,6 @@ VERSION = 0.8;
 DATE = 'April 2020';
 MAX_VALID_FIFF_VERSION = 1.3;
 
-if(nargin == 0)
-  error('Please specify a fiff file to anonymize.');
-end
 opts = configure_options(inFile, varargin{:});
 outDir = [];
 blockTypeList = [];
