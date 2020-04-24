@@ -406,6 +406,26 @@ switch(inTag.kind)
         datestr(datetime(inBirthDayPosix, 'ConvertFrom', 'posixtime')) ...
         ' -> ' datestr(datetime(newDateJulian, 'ConvertFrom', 'juliandate'))]);
     end
+  case 405
+    if opts.brute
+      data = dataArray2int(inTag.data);
+      newData = int2dataArray(opts.subjectDefaultSex);
+      if opts.verbose
+        disp(['Subject''s sex changed: ' enumSex(data) ' -> ' enumSex(opts.subjectSex)]);
+      end
+    else
+      newData = inTag.data;
+    end
+  case 406
+    if opts.brute
+      data = dataArray2int(inTag.data);
+      newData = int2dataArray(opts.subjectDfltHandedness);
+      if opts.verbose
+        disp(['Subject''s handedness changed: ' enumHandedness(data) ' -> ' enumHandedness(opts.subjectHandedness)]);
+      end
+    else
+      newData = inTag.data;
+    end
   case 407
     if opts.brute
       data =  floatAsDataArray2double(inTag.data);
@@ -618,6 +638,8 @@ opts.subjectFirstName = defaultString;
 opts.subjectMiddleName = 'bst';
 opts.subjectLastName = defaultString;
 opts.subjectBirthDayDefault = posixtime(datetime(2000, 1, 1, 0, 1, 1));
+opts.subjectSex = 0;
+opts.subjectHandedness = 0;
 opts.subjectWeight = 0;
 opts.subjectHeight = 0;
 opts.subjectComment = defaultString;
@@ -668,3 +690,18 @@ end
 function data = double2floatAsDataArray(d)
   data = fliplr(typecast(single(d), 'uint8'));
 end
+
+function s = enumSex(i)
+ sexEnum{1} =  'anonymized';
+ sexEnum{2} =  'male';
+ sexEnum{3} =  'female';
+ s = sexEnum{i+1};
+end
+ 
+function h = enumHandedness(i)
+  handednessEnum{1} = 'anonymized';
+  handednessEnum{2} = 'right';
+  handednessEnum{3} = 'left';
+  h = handednessEnum{i+1};
+end
+
