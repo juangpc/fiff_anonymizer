@@ -29,80 +29,83 @@ function fiff_anonymizer(inFile, varargin)
 %  Options:
 %
 %  filename    example.fif
-%          Required input with the name of the file to be
-%          anonymized.
+%              Required input with the name of the file to be
+%              anonymized.
 %
 %  verbose     {true, false}       Default: false
-%          Print detailed information during each step in the
-%          anonymization process.
+%              Print detailed information during each step in the
+%              anonymization process.
 %
-%  output_file   example_anonymized.fif
-%          Name of the output file name. If not specified the
-%          output file name will have the same name as the input
-%          file, followed by the string "_anonymized" and will
-%          have the same extension.
+%  output_file  example_anonymized.fif
+%               Name of the output file name. If not specified the
+%               output file name will have the same name as the input
+%               file, followed by the string "_anonymized" and will
+%               have the same extension.
 %
-%  set_measurement_date_offset  Number of days  Default: 0
-%          The input file contains several records of the moment
-%          when the raw file was recorded. If this option is used,
-%          the specified number of days will be subtracted to the
-%          date stored in the file.
+%  set_measurement_date_offset  Number of days
+%               The input file contains several records of the moment
+%               when the raw file was recorded. If this option is used,
+%               the specified number of days will be subtracted to the
+%               date stored in the file.
 %
-%  set_subject_birthday_offset  Number of days  Default: 0
-%          If the input file contains the subject's date of birth,
-%          the specified number of days will be subtracted to the
-%          date of birth stored in the output file.
+%  set_subject_birthday_offset  Number of days
+%               If the input file contains the subject's date of birth,
+%               the specified number of days will be subtracted to the
+%               date of birth stored in the output file.
 %
 %  delete_input_file_after {true, false}   Default: false
-%          To help anonymize a collection of fiff files, this
-%          option will make the application to delete the input
-%          file.
+%               To help anonymize a collection of fiff files, this
+%               option will make the application to delete the input
+%               file.
 %
 %  delete_confirmation   {true, false}   Default: true
-%          If this option is set to true a confirmation message
-%          will be printed to the user for confirmation before
-%          deleting the input file.
-%  brute      {true, false}      	Default: false
-%          Additional Subject and Project information fields will
-%          be anonymized.
-%  quiet      {true, false}       Default: false
-%          Quiet display option mode. Fiff_anonymizer runs but no
-%          output is shown to the user, except for the prompt
-%          shown whenever delete_input_file_after option is set
-%          accordingly. This option overrides the verbose mode.
+%               If this option is set to true a confirmation message
+%               will be printed to the user for confirmation before
+%               deleting the input file.
+%  brute   {true, false}      	Default: false
+%               Additional Subject and Project information fields will
+%               be anonymized.
+%  quiet   {true, false}   Default: false
+%               Quiet display option mode. Fiff_anonymizer runs but no
+%               output is shown to the user, except for the prompt
+%               shown whenever delete_input_file_after option is set
+%               accordingly. This option overrides the verbose mode.
 %
 %
 %  FIELDS ANONYMIZED BY DEFAULT:
 %  File ID        Containing MAC address of the acquisition pc and the
-%             measurement date. If the 'set_measurement_date_offset'
-%             option is used, the date stored in the output
-%             file will be the same as in the input file minus
-%             the specified number of days. If the option is
-%             not used, a default date will be stored in the
-%             output file.
-%  Measurement Date   If the 'set_measurement_date_offset'
-%             option is used, the date stored in the output
-%             file will be the same as in the input file minus
-%             the specified number of days. By default, a
-%             specific date will be stored in the output file.
-%  Measurement Comment  A description of the Acquisition system. A
-%             reference to the site where the acquisition
-%             machine is installed.
+%                 measurement date. If the 'set_measurement_date_offset'
+%                 option is used, the date stored in the output
+%                 file will be the same as in the input file minus
+%                 the specified number of days. If the option is
+%                 not used, a default date will be stored in the
+%                 output file.
+%  Measurement   Date   If the 'set_measurement_date_offset'
+%                       option is used, the date stored in the output
+%                       file will be the same as in the input file minus
+%                       the specified number of days. If not, a
+%                       specific default date (January 1st, 20000) will be stored 
+%                       in the output file.
+% 
+%  Measurement   Comment  A description of the Acquisition system. A
+%                         reference to the site where the acquisition
+%                         machine is installed.
 %  Experimenter
 %  Subject ID
 %  Subject First Name
 %  Subject Middle Name
 %  Subject Last Name
 %  Subject Birthday   If the 'set_subject_birthday_offset' options is
-%             used, Subject Birthday in the output file will be
-%             equal to the input file minus the specified
-%             number of days. By default, a specific date will
-%             be stored in the output file.
+%                     used, Subject Birthday in the output file will be
+%                     equal to the input file minus the specified
+%                     number of days. If not, a default date (January 1st, 2000) 
+%                     will be stored in the output file.
 %  Subject Comment
 %  Subject Hospital ID
 %  Project Persons
 %
-%  Fields anonymized when 'brute' option is set to TRUE:
+%  Fields anonymized only when 'brute' option is set to TRUE:
+%
 %  Subject Weight
 %  Subject Height
 %  Project ID
@@ -144,15 +147,15 @@ if(opts.verbose && outFid>0)
   display(['Output file created: ' opts.outputFile]);
 end
 
-[inTag, endOfFile] = read_tag(inFid, jumpAfterRead);
+[inTag, endOfFile] = read_tag(inFid, jumpAfterRead); %#ok<ASGLU>
 blockTypeList=update_block_type_list(blockTypeList, inTag);
 
 % read first tag->fileID?->outFile
-if(firstTagWrong(inTag, MAX_VALID_FIFF_VERSION))
+if(wrongFifVersion(inTag, MAX_VALID_FIFF_VERSION))
   fclose(inFid);
   fclose(outFid);
   delete(opts.outputFile);
-  error('There was a problem with the first tag');
+  error('This appears to be an invalid file.');
 end
 
 % anonymize and write first tag to output tag
@@ -161,6 +164,22 @@ outTagDir = add_entry_to_tagDir(outTagDir, outTag, ftell(outFid));
 outTag.next = 0;
 write_tag(outFid, outTag);
 
+% check pointer to tag directory
+[inTag, endOfFile] = read_tag(inFid, jumpAfterRead); %#ok<ASGLU>
+blockTypeList = update_block_type_list(blockTypeList, inTag);
+if(inTag.kind ~= 101)
+  error('Sorry! This is not a valid FIF file.');
+end
+inDirPos = dataArray2int(inTag.data);
+if (inDirPos > 0)
+  inFileHasTagDir = true;
+else
+  inFileHasTagDir = false;
+end
+[outTag, ~] = censor_tag(inTag, blockTypeList, opts);
+outTagDir = add_entry_to_tagDir(outTagDir, outTag, ftell(outFid));
+write_tag(outFid, outTag);
+  
 % for all the tags in the file
 while (inTag.next ~= -1)
   [inTag, endOfFile] = read_tag(inFid, jumpAfterRead);
@@ -180,20 +199,23 @@ fclose(inFid);
 if opts.verbose
   disp('Building Tag Directory for the anonymized file.');
 end
-outTagDir = add_final_entry_to_tagDir(outTagDir);
-outTagDirAddr = ftell(outFid);
-if opts.verbose
-  disp(['Saving Tag Directory into ' opts.outputFile]);
-end
-write_directory(outFid, outTagDir, outTagDirAddr);
 
-ptrDIR_KIND = 101;
-ptrFREELIST_KIND = 106;
-if opts.verbose
-  disp(['Updating file pointers in' opts.outputFile]);
+if (inFileHasTagDir)
+  outTagDir = add_final_entry_to_tagDir(outTagDir);
+  outTagDirAddr = ftell(outFid);
+  if opts.verbose
+    disp(['Saving Tag Directory into ' opts.outputFile]);
+  end
+  write_directory(outFid, outTagDir, outTagDirAddr);
+
+  ptrDIR_KIND = 101;
+  ptrFREELIST_KIND = 106;
+  if opts.verbose
+    disp(['Updating file pointers in ' opts.outputFile]);
+  end
+  update_pointer(outFid, outTagDir, ptrDIR_KIND, outTagDirAddr);
+  update_pointer(outFid, outTagDir, ptrFREELIST_KIND, -1);
 end
-update_pointer(outFid, outTagDir, ptrDIR_KIND, outTagDirAddr);
-update_pointer(outFid, outTagDir, ptrFREELIST_KIND, -1);
 
 fclose(outFid);
 
@@ -221,6 +243,10 @@ if opts.deleteFileAfter
       disp(['Deleting input file: ' opts.inputFile]);
     end
     delete(opts.inputFile);
+  else
+    if opts.verbose
+      disp(['File ' opts.outputFile ' not deleted.']);
+    end
   end
 end
 
@@ -276,8 +302,7 @@ end
 
 function fileInfo = parse_fileID_tag(data)
 fileInfo.version = (data(1)*16^2 + data(2)) + (data(3)*16^2 + data(4))/10;
-fileInfo.time = data(13)*16^6 + data(14)*16^4 + data(15)*16^2 + data(16) ...
-  + (data(17)*16^6 + data(18)*16^4 + data(19)*16^2 + data(20))/1e6;
+fileInfo.time = dataArray2int(data(13:16)) + dataArray2int(data(17:20))/1e6;
 fileInfo.mac = data(5:12);
 %parsing mac address to text
 %somewhat erratic. different elekta sites tend to code mac info in
@@ -294,7 +319,6 @@ else
   end
 end
 fileInfo.macStr = macStr(1:end-1);
-
 end
 
 function [outTag, sizeDiff] = censor_tag(inTag, blockTypeList, opts)
@@ -305,14 +329,11 @@ switch(inTag.kind)
     versionNum = inTag.data(1:4);
     newMacAddr = opts.defaultMAC;
     if opts.usingMeasDateOffset
-      newDatePosix = ceil(inFileID.time-24*60*60*opts.measDateOffset);
+      newDatePosix = floor(inFileID.time-24*60*60*opts.measDateOffset);
     else
       newDatePosix = opts.measDateDefault;
     end
-    newDate = dec2hex(newDatePosix);
-    newDateData = ...
-      hex2dec([newDate(1:2);newDate(3:4);newDate(5:6);newDate(7:8);
-      '00';'00';'00';'01']);
+    newDateData = [int2dataArray(newDatePosix);0;0;0;1];
     newData = [versionNum;newMacAddr;newDateData];
     if opts.verbose
       disp(['MAC address changed: ' inFileID.macStr ...
@@ -322,16 +343,13 @@ switch(inTag.kind)
         ' -> ' datestr(datetime(newDatePosix, 'ConvertFrom', 'posixtime'))]);
     end
   case 204 %meas date
-    inDate = inTag.data(1)*16^6 + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
+    inDate = dataArray2int(inTag.data);
     if opts.usingMeasDateOffset
-      newDatePosix = ceil(inDate-24*60*60*opts.measDateOffset);
+      newDatePosix = floor(inDate-24*60*60*opts.measDateOffset);
     else
       newDatePosix = opts.measDateDefault;
     end
-    newDate = dec2hex(newDatePosix);
-    newData = ...
-      hex2dec([newDate(1:2);newDate(3:4);newDate(5:6);newDate(7:8);
-      '00';'00';'00';'01']);
+    newData = [int2dataArray(newDatePosix);0;0;0;1];
     if opts.verbose
       disp(['Measurement date changed: ' ...
         datestr(datetime(inDate, 'ConvertFrom', 'posixtime')) ...
@@ -344,6 +362,8 @@ switch(inTag.kind)
         disp(['Description of the measurement block changed: ' ...
           char(inTag.data') ' -> ' opts.string]);
       end
+    else
+      newData = inTag.data;
     end
   case 212
     newData = double(opts.string)';
@@ -351,11 +371,10 @@ switch(inTag.kind)
       disp(['Experimenter changed: ' char(inTag.data') ' -> ' opts.string]);
     end
   case 400
-    inData = inTag.data;
-    data = inData(1)*16^6 + inData(2)*16^4 + inData(3)*16^2 + inData(4);
-    newData = opts.subjectId;
+    data = dataArray2int(inTag.data);
+    newData = int2dataArray(opts.subjectId);
     if opts.verbose
-      disp(['Subject ID changed: ' num2str(data) ' -> ' num2str(newData)]);
+      disp(['Subject ID changed: ' num2str(data) ' -> ' num2str(opts.subjectId)]);
     end
   case 401
     newData = double(opts.subjectFirstName)';
@@ -373,17 +392,15 @@ switch(inTag.kind)
       disp(['Subject Last Name changed: ' char(inTag.data') ' -> ' opts.subjectLastName]);
     end
   case 404
-    inBirthDay = inTag.data(1)*16^6 + inTag.data(2)*16^4 + inTag.data(3)*16^2 + inTag.data(4);
+    inBirthDay = dataArray2int(inTag.data);
     inBirthDayPosix = posixtime(datetime(inBirthDay, 'ConvertFrom', 'juliandate'));
-    if opts.usingSubjectBirthDayOffset
-      newDatePosix = inBirthDayPosix-24*60*60*opts.subjectBirthDayOffset;
+    if opts.usingsubjectBirthdayOffset
+      newDatePosix = floor(inBirthDayPosix-24*60*60*opts.subjectBirthdayOffset);
     else
       newDatePosix = opts.subjectBirthDayDefault;
     end
     newDateJulian = ceil(juliandate(datetime(newDatePosix, 'convertfrom', 'posixtime')));
-    newDate = ['00' dec2hex(newDateJulian)];
-    newData = ...
-      hex2dec([newDate(1:2);newDate(3:4);newDate(5:6);newDate(7:8)]);
+    newData = int2dataArray(newDateJulian);
     if opts.verbose
       disp(['Subject birthday changed: ' ...
         datestr(datetime(inBirthDayPosix, 'ConvertFrom', 'posixtime')) ...
@@ -391,21 +408,23 @@ switch(inTag.kind)
     end
   case 407
     if opts.brute
-      inData = inTag.data;
-      data = typecast(fliplr(uint8(inData)'), 'single') ;
-      newData = fliplr(typecast(single(opts.subjectWeight), 'uint8'));
+      data =  floatAsDataArray2double(inTag.data);
+      newData = double2floatAsDataArray(opts.subjectWeight);
       if opts.verbose
         disp(['Subject weight changed: ' num2str(data) ' -> ' num2str(opts.subjectWeight)]);
       end
+    else
+      newData = inTag.data;
     end
   case 408
     if opts.brute
-      inData = inTag.data;
-      data = typecast( fliplr(uint8(inData)') , 'single') ;
-      newData = fliplr(typecast(single(opts.subjectHeight), 'uint8'));
+      data = floatAsDataArray2double(inTag.data);
+      newData = double2floatAsDataArray(opts.subjectHeight);
       if opts.verbose
         disp(['Subject height changed: ' num2str(data) ' -> ' num2str(opts.subjectHeight)]);
       end
+    else
+      newData = inTag.data;
     end
   case 409
     newData = double(opts.subjectComment)';
@@ -419,12 +438,13 @@ switch(inTag.kind)
     end
   case 500
     if opts.brute
-      newData = opts.projectId;
-      inData = inTag.data;
-      data = inData(1)*16^6 + inData(2)*16^4 + inData(3)*16^2 + inData(4);
+      newData = int2dataArray(opts.projectId);      
+      data = dataArray2int(inTag.data);
       if opts.verbose
         disp(['Project ID changed: ' num2str(data) ' -> ' num2str(opts.projectId)]);
       end
+    else
+      newData = inTag.data;
     end
   case 501
     if opts.brute
@@ -432,6 +452,8 @@ switch(inTag.kind)
       if opts.verbose
         disp(['Project Name changed: ' char(inTag.data') ' -> ' opts.projectName]);
       end
+    else
+      newData = inTag.data;
     end
   case 502
     if opts.brute
@@ -461,9 +483,6 @@ switch(inTag.kind)
     disp(' ');
   otherwise
     newData = inTag.data;
-end
-if ~exist('newData', 'var')
-  newData = inTag.data;
 end
 
 outTag.kind = inTag.kind;
@@ -529,7 +548,7 @@ end
 
 function blockTypeList = update_block_type_list(blockTypeList, tag)
 if(tag.kind == 104)%block start
-  blockType = 16^3*tag.data(1)+16^2*tag.data(2)+16*tag.data(3)+tag.data(4);
+  blockType = dataArray2int(tag.data);
   blockTypeList = cat(1, blockTypeList, blockType);
 elseif(tag.kind==105)%block end
   try
@@ -571,7 +590,7 @@ opts.inputFile = inParams.Results.fileName;
 opts.verbose = inParams.Results.verbose;
 opts.outputFile = inParams.Results.output_file;
 opts.measDateOffset = inParams.Results.set_measurement_date_offset;
-opts.subjectBirthDayOffset = inParams.Results.set_subject_birthday_offset;
+opts.subjectBirthdayOffset = inParams.Results.set_subject_birthday_offset;
 opts.deleteFileAfter = inParams.Results.delete_input_file_after;
 opts.deleteConfirmation = inParams.Results.delete_confirmation;
 opts.brute = inParams.Results.brute;
@@ -582,7 +601,7 @@ end
 
 opts.usingMeasDateOffset = ...
   ~any(strcmp(inParams.UsingDefaults, 'set_measurement_date_offset'));
-opts.usingSubjectBirthDayOffset = ...
+opts.usingsubjectBirthdayOffset = ...
   ~any(strcmp(inParams.UsingDefaults, 'set_subject_birthday_offset'));
 
 opts.measDateDefault = posixtime(datetime(2000, 1, 1, 0, 1, 1));
@@ -595,9 +614,9 @@ end
 opts.defaultMacStr = macStr(1:end-1);
 
 opts.subjectId = 0;
-opts.subjectFirstName = 'brainstorm_anonymizer';
+opts.subjectFirstName = defaultString;
 opts.subjectMiddleName = 'bst';
-opts.subjectLastName = 'brainstorm_anonymizer';
+opts.subjectLastName = defaultString;
 opts.subjectBirthDayDefault = posixtime(datetime(2000, 1, 1, 0, 1, 1));
 opts.subjectWeight = 0;
 opts.subjectHeight = 0;
@@ -605,20 +624,20 @@ opts.subjectComment = defaultString;
 opts.subjectHisId = 'bst';
 
 opts.projectId = 0;
-opts.projectName = 'brainstorm_anonymizer';
-opts.projectAim = 'brainstorm_anonymizer';
-opts.projectPersons = 'brainstorm_anonymizer';
+opts.projectName = defaultString;
+opts.projectAim = defaultString;
+opts.projectPersons = defaultString;
 opts.projectComment = defaultString;
 
 end
 
-function r = firstTagWrong(inTag, fiffver)
+function r = wrongFifVersion(inTag, fiffver)
 %first tag should be an ID tag.
 r = false;
 %checking for valid fiff file.
 if(inTag.kind ~= 100)
-  r = true;
-  warning('Sorry! This is not a valid FIFF file. First file should be an ID tag.');
+  r = true; %we'll assume it is wrong version then.
+  warning('Sorry! This is not a valid FIF ID tag.');
 else
   %checking for correct version of fif file format
   fileID = parse_fileID_tag(inTag.data);
@@ -629,4 +648,23 @@ else
   end
 end
 
+end
+
+function i = dataArray2int(data)
+  %i = double(typecast(fliplr(uint8(data(:))'), 'int32'));
+  i = data(1)*2^24 + data(2)*2^16 + data(3)*2^8 + data(4);
+end
+
+function d = int2dataArray(p)
+  dd = dec2hex(p,8);
+  d = [hex2dec(dd(1:2));hex2dec(dd(3:4));...
+       hex2dec(dd(5:6));hex2dec(dd(7:8))];
+end
+
+function r = floatAsDataArray2double(data)
+  r = typecast(fliplr(uint8(data(:))'), 'single');
+end
+
+function data = double2floatAsDataArray(d)
+  data = fliplr(typecast(single(d), 'uint8'));
 end
