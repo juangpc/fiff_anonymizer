@@ -106,9 +106,11 @@ function fiff_anonymizer(inFile, varargin)
 %
 %  Fields anonymized only when 'brute' option is set to TRUE:
 %
-%  Subject Weight
-%  Subject Height
-%  Project ID
+%  Subjcet's Sex
+%  Subject's Handedness
+%  Subject's Weight
+%  Subject's Height
+%  Project's ID
 %  Project Name
 %  Project Aim
 %  Project Comment
