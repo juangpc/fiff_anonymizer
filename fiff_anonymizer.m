@@ -140,7 +140,7 @@ if opts.verbose
   disp(' ');
 end
 
-[inFid, ~] = fopen(opts.inputFile, 'r+', 'ieee-be');
+[inFid, ~] = fopen(opts.inputFile, 'r', 'ieee-be');
 if(opts.verbose && inFid>0)
   display(['Input file opened: ' opts.inputFile]);
 end
